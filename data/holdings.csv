@@ -1,0 +1,3 @@
+Ticker,Shares,EntryPrice,EntryDate,Factor,Notes
+AAPL,10,185.20,2025-11-04,Momentum,
+MSFT,5,410.50,2025-12-01,GARP,

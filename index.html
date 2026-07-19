@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="tape-header">
+    <div class="tape-track" id="tape-track" aria-hidden="true"></div>
+  </header>
+
+  <main class="wrap">
+
+    <section class="summary-row" id="summary-row">
+      <div class="summary-card">
+        <span class="label">Total Value</span>
+        <span class="num" id="sum-value">—</span>
+      </div>
+      <div class="summary-card">
+        <span class="label">Cost Basis</span>
+        <span class="num" id="sum-cost">—</span>
+      </div>
+      <div class="summary-card">
+        <span class="label">Total P&amp;L</span>
+        <span class="num" id="sum-pl">—</span>
+      </div>
+      <div class="summary-card">
+        <span class="label">Total P&amp;L %</span>
+        <span class="num" id="sum-pl-pct">—</span>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div class="panel panel-chart">
+        <div class="panel-head">
+          <h2>Performance</h2>
+          <span class="eyebrow" id="perf-range">—</span>
+        </div>
+        <canvas id="performance-chart" height="140"></canvas>
+      </div>
+
+      <div class="panel panel-breakdowns">
+        <div class="breakdown-block">
+          <div class="panel-head">
+            <h2>Sector</h2>
+          </div>
+          <canvas id="sector-chart" height="140"></canvas>
+        </div>
+        <div class="breakdown-block">
+          <div class="panel-head">
+            <h2>Factor</h2>
+          </div>
+          <canvas id="factor-chart" height="140"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel panel-table">
+      <div class="panel-head">
+        <h2>Positions</h2>
+        <span class="eyebrow" id="position-count">—</span>
+      </div>
+      <div class="table-scroll">
+        <table id="holdings-table">
+          <thead>
+            <tr>
+              <th data-key="ticker">Ticker</th>
+              <th data-key="sector">Sector</th>
+              <th data-key="factor">Factor</th>
+              <th data-key="shares" class="num-col">Shares</th>
+              <th data-key="entry_price" class="num-col">Entry</th>
+              <th data-key="current_price" class="num-col">Last</th>
+              <th data-key="market_value" class="num-col">Value</th>
+              <th data-key="pl" class="num-col">P&amp;L</th>
+              <th data-key="pl_pct" class="num-col">P&amp;L %</th>
+              <th data-key="weight_pct" class="num-col">Weight</th>
+            </tr>
+          </thead>
+          <tbody id="holdings-body">
+            <tr><td colspan="10" class="empty-state">Loading positions…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <span id="last-updated">—</span>
+      <span class="divider">·</span>
+      <span>Data via Yahoo Finance, refreshed on schedule by GitHub Actions.</span>
+      <span class="divider">·</span>
+      <span>Not investment advice.</span>
+    </footer>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

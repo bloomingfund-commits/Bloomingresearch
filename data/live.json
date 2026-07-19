@@ -1,0 +1,55 @@
+{
+  "summary": {
+    "total_value": 1969.1,
+    "total_cost": 2052.5,
+    "total_pl": -83.4,
+    "total_pl_pct": -4.06,
+    "updated": "2026-07-19T15:09:34+00:00"
+  },
+  "holdings": [
+    {
+      "ticker": "AAPL",
+      "shares": 10.0,
+      "entry_price": 185.2,
+      "entry_date": "2025-11-04",
+      "factor": "Momentum",
+      "notes": "",
+      "current_price": null,
+      "sector": "Technology",
+      "cost_basis": 1852.0,
+      "market_value": null,
+      "pl": null,
+      "pl_pct": null,
+      "weight_pct": null
+    },
+    {
+      "ticker": "MSFT",
+      "shares": 5.0,
+      "entry_price": 410.5,
+      "entry_date": "2025-12-01",
+      "factor": "GARP",
+      "notes": "",
+      "current_price": 393.82,
+      "sector": "Technology",
+      "cost_basis": 2052.5,
+      "market_value": 1969.1,
+      "pl": -83.4,
+      "pl_pct": -4.06,
+      "weight_pct": 100.0
+    }
+  ],
+  "sector_breakdown": [
+    {
+      "label": "Technology",
+      "value": 1969.1,
+      "pct": 100.0
+    }
+  ],
+  "factor_breakdown": [
+    {
+      "label": "GARP",
+      "value": 1969.1,
+      "pct": 100.0
+    }
+  ]
+}
