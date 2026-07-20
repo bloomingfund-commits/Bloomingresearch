@@ -147,9 +147,13 @@ def build_breakdown(trades, key):
 
 def parse_note(path: Path):
     """Minimal frontmatter parser: a --- delimited block of key: value
-    lines at the top of the file, followed by a markdown body."""
+    lines at the top of the file, followed by a markdown body.
+
+    Optional frontmatter field `pdf: filename.pdf` attaches a downloadable
+    PDF (the file itself should be uploaded to notes/pdfs/filename.pdf).
+    The markdown body can be left empty if the PDF is the whole note."""
     text = path.read_text(encoding="utf-8")
-    meta = {"ticker": "", "date": "", "title": path.stem}
+    meta = {"ticker": "", "date": "", "title": path.stem, "pdf": ""}
     body = text
 
     m = re.match(r"^---\s*\n(.*?)\n---\s*\n(.*)$", text, re.DOTALL)
@@ -160,11 +164,15 @@ def parse_note(path: Path):
                 k, v = line.split(":", 1)
                 meta[k.strip().lower()] = v.strip()
 
+    pdf_filename = meta.get("pdf", "").strip()
+
     return {
         "ticker": meta.get("ticker", "").strip().upper(),
         "date": meta.get("date", "").strip(),
         "title": meta.get("title", path.stem).strip(),
-        "html": md.markdown(body.strip(), extensions=["extra"]),
+        "html": md.markdown(body.strip(), extensions=["extra"]) if body.strip() else "",
+        "pdf_path": f"notes/pdfs/{pdf_filename}" if pdf_filename else None,
+        "pdf_name": pdf_filename or None,
     }
 
 

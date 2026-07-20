@@ -227,6 +227,24 @@ td.pl-neg { color: var(--loss); }
 .note-body strong { color: var(--text); }
 .note-body a { color: var(--accent); }
 
+.pdf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.7rem;
+  border-radius: 3px;
+  background: rgba(212, 162, 76, 0.06);
+}
+
+.pdf-link:hover {
+  border-color: var(--accent);
+}
+
 /* ---------- Footer ---------- */
 .site-footer {
   font-size: 0.78rem;

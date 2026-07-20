@@ -155,7 +155,8 @@ function renderNotes(notes) {
           <span class="note-date">${n.date || ""}</span>
         </div>
         <h3 class="note-title">${n.title}</h3>
-        <div class="note-body">${n.html}</div>
+        ${n.html ? `<div class="note-body">${n.html}</div>` : ""}
+        ${n.pdf_path ? `<a class="pdf-link" href="${n.pdf_path}" target="_blank" rel="noopener">📄 ${n.pdf_name}</a>` : ""}
       </article>
     `)
     .join("");
