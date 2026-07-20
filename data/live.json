@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-20T05:51:19Z",
+  "updated": "2026-07-20T05:57:44Z",
   "trades": [
     {
       "ticker": "AAPL",
@@ -64,35 +64,35 @@
     },
     {
       "trade_num": 2,
-      "equity_pct": 6.94
+      "equity_pct": 7.24
     },
     {
       "trade_num": 3,
-      "equity_pct": 28.61
+      "equity_pct": 27.51
     }
   ],
   "sector_breakdown": [
     {
       "label": "Technology",
-      "value": 4960.5,
+      "value": 3,
       "pct": 100.0
     }
   ],
   "theme_breakdown": [
     {
-      "label": "GARP",
-      "value": 2052.5,
-      "pct": 41.38
+      "label": "Momentum",
+      "value": 1,
+      "pct": 33.33
     },
     {
-      "label": "Momentum",
-      "value": 1852.0,
-      "pct": 37.33
+      "label": "GARP",
+      "value": 1,
+      "pct": 33.33
     },
     {
       "label": "AI Infrastructure",
-      "value": 1056.0,
-      "pct": 21.29
+      "value": 1,
+      "pct": 33.33
     }
   ],
   "notes": [
