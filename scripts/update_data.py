@@ -116,34 +116,31 @@ def build_trades(positions):
 
 
 def build_equity_curve(trades):
-    """Cumulative COMPOUNDED return (%), one point per trade, in close-date
-    order -- i.e. each trade's return is applied to the running total, as
-    if fully reinvested each time. Starts at 0% before any trades.
-
-    (If you'd rather see simple additive P&L% per trade instead of
-    compounded, that's a one-line change here -- flag it if so.)
-    """
+    """Cumulative ADDITIVE P&L% -- each trade's return is simply added to
+    the running total (not compounded/reinvested). Starts at 0% before
+    any trades. E.g. +10%, -3%, +20% -> running total ends at +27%."""
     curve = [{"trade_num": 0, "equity_pct": 0.0}]
-    equity = 1.0
+    running_total = 0.0
     for t in trades:
         if t["pl_pct"] is None:
             continue
-        equity *= (1 + t["pl_pct"] / 100)
-        curve.append({"trade_num": t["trade_num"], "equity_pct": round((equity - 1) * 100, 2)})
+        running_total += t["pl_pct"]
+        curve.append({"trade_num": t["trade_num"], "equity_pct": round(running_total, 2)})
     return curve
 
 
 def build_breakdown(trades, key):
-    """Distribution by capital deployed (cost basis) per sector/theme --
-    since every position here is closed, this reflects where capital
-    historically went, not a live current allocation."""
+    """Distribution by TICKER COUNT, not capital deployed -- each ticker
+    contributes equally to its sector/theme bucket regardless of position
+    size. E.g. one Tech ticker + one Healthcare ticker = 50/50, even if
+    one position was 10x the dollar size of the other."""
     buckets = {}
-    total = 0.0
+    total = 0
     for t in trades:
-        buckets[t[key]] = buckets.get(t[key], 0.0) + t["cost_basis"]
-        total += t["cost_basis"]
+        buckets[t[key]] = buckets.get(t[key], 0) + 1
+        total += 1
     return [
-        {"label": k, "value": round(v, 2), "pct": round(v / total * 100, 2) if total else 0}
+        {"label": k, "value": v, "pct": round(v / total * 100, 2) if total else 0}
         for k, v in sorted(buckets.items(), key=lambda kv: -kv[1])
     ]
 
