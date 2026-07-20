@@ -1,0 +1,4 @@
+Ticker,Shares,EntryDate,EntryPrice,CloseDate,ClosePrice,Theme
+AAPL,10,2025-11-04,185.20,2026-01-15,204.10,Momentum
+MSFT,5,2025-12-01,410.50,2026-02-20,398.30,GARP
+NVDA,8,2026-01-05,132.00,2026-03-10,158.75,AI Infrastructure

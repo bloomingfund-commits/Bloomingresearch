@@ -1,7 +1,6 @@
-// Portfolio dashboard — reads data/live.json and data/history.json
-// (both written by scripts/update_data.py, refreshed on schedule by
-// .github/workflows/update.yml) and renders the page. No build step,
-// no framework — plain fetch + DOM + Chart.js.
+// Closed-positions dashboard — reads data/live.json (written by
+// scripts/update_data.py, rebuilt automatically by
+// .github/workflows/update.yml whenever you push a trade or note change).
 
 const CHART_COLORS = ["#D4A24C", "#3FBF7F", "#5B8DEF", "#E2574C", "#9B7FE0", "#4FB8C4", "#C97BB0", "#8B93A7"];
 
@@ -27,89 +26,29 @@ async function loadJSON(path) {
   return res.json();
 }
 
-function renderSummary(summary) {
-  document.getElementById("sum-value").textContent = fmtUSD(summary.total_value);
-  document.getElementById("sum-cost").textContent = fmtUSD(summary.total_cost);
+// ---------- Equity curve ----------
+function renderEquityChart(curve, summary) {
+  const ctx = document.getElementById("equity-chart");
+  if (!curve.length) return;
 
-  const plEl = document.getElementById("sum-pl");
-  plEl.textContent = fmtUSD(summary.total_pl);
-  plEl.className = "num " + plClass(summary.total_pl);
-
-  const plPctEl = document.getElementById("sum-pl-pct");
-  plPctEl.textContent = fmtPct(summary.total_pl_pct);
-  plPctEl.className = "num " + plClass(summary.total_pl_pct);
-
-  const updated = summary.updated ? new Date(summary.updated) : null;
-  document.getElementById("last-updated").textContent = updated
-    ? `Last updated ${updated.toLocaleString()}`
-    : "Last updated —";
-}
-
-function renderTape(holdings) {
-  const track = document.getElementById("tape-track");
-  if (!holdings.length) return;
-
-  const item = (h) => {
-    const dir = h.pl_pct > 0 ? "tk-up" : h.pl_pct < 0 ? "tk-down" : "tk-flat";
-    const arrow = h.pl_pct > 0 ? "▲" : h.pl_pct < 0 ? "▼" : "•";
-    const pct = h.pl_pct === null ? "—" : `${arrow} ${Math.abs(h.pl_pct).toFixed(2)}%`;
-    return `<span><span class="tk-sym">${h.ticker}</span><span class="${dir}">${pct}</span></span>`;
-  };
-
-  // Duplicate the list so the CSS scroll animation (translateX -50%) loops seamlessly.
-  const row = holdings.map(item).join("");
-  track.innerHTML = row + row;
-}
-
-function renderTable(holdings) {
-  const body = document.getElementById("holdings-body");
-  document.getElementById("position-count").textContent = `${holdings.length} position${holdings.length === 1 ? "" : "s"}`;
-
-  if (!holdings.length) {
-    body.innerHTML = `<tr><td colspan="10" class="empty-state">No positions in data/holdings.csv yet.</td></tr>`;
-    return;
-  }
-
-  const rows = holdings
-    .slice()
-    .sort((a, b) => (b.market_value ?? -Infinity) - (a.market_value ?? -Infinity))
-    .map((h) => `
-      <tr>
-        <td class="ticker-cell">${h.ticker}</td>
-        <td>${h.sector ?? "—"}</td>
-        <td>${h.factor ?? "—"}</td>
-        <td class="num-col">${h.shares}</td>
-        <td class="num-col">${fmtUSD(h.entry_price)}</td>
-        <td class="num-col">${fmtUSD(h.current_price)}</td>
-        <td class="num-col">${fmtUSD(h.market_value)}</td>
-        <td class="num-col ${plClass(h.pl)}">${fmtUSD(h.pl)}</td>
-        <td class="num-col ${plClass(h.pl_pct)}">${fmtPct(h.pl_pct)}</td>
-        <td class="num-col">${h.weight_pct === null ? "—" : h.weight_pct.toFixed(1) + "%"}</td>
-      </tr>
-    `)
-    .join("");
-
-  body.innerHTML = rows;
-}
-
-function renderPerformanceChart(history) {
-  const ctx = document.getElementById("performance-chart");
-  if (!history.length) return;
-
-  document.getElementById("perf-range").textContent =
-    `${history[0].Date} → ${history[history.length - 1].Date}`;
+  const finalPct = curve[curve.length - 1].equity_pct;
+  const tradeCount = summary.total_trades ?? curve.length - 1;
+  const winRate = summary.win_rate;
+  document.getElementById("equity-eyebrow").textContent =
+    `${tradeCount} trades` + (winRate !== null && winRate !== undefined ? ` · ${winRate}% win rate` : "") +
+    ` · ${fmtPct(finalPct)} cumulative`;
 
   new Chart(ctx, {
     type: "line",
     data: {
-      labels: history.map((r) => r.Date),
+      labels: curve.map((p) => p.trade_num),
       datasets: [{
-        label: "Portfolio Value",
-        data: history.map((r) => r.TotalValue),
+        label: "Cumulative Return",
+        data: curve.map((p) => p.equity_pct),
         borderColor: "#D4A24C",
         backgroundColor: "rgba(212, 162, 76, 0.08)",
         fill: true,
-        tension: 0.25,
+        tension: 0.2,
         pointRadius: 0,
         borderWidth: 2,
       }],
@@ -118,16 +57,60 @@ function renderPerformanceChart(history) {
       responsive: true,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { color: "#232838" }, ticks: { color: "#8B93A7", maxTicksLimit: 8 } },
-        y: {
+        x: {
+          title: { display: true, text: "Trade #", color: "#8B93A7" },
           grid: { color: "#232838" },
-          ticks: { color: "#8B93A7", callback: (v) => fmtUSD(v) },
+          ticks: { color: "#8B93A7" },
+        },
+        y: {
+          title: { display: true, text: "Cumulative Return (%)", color: "#8B93A7" },
+          grid: { color: "#232838" },
+          ticks: { color: "#8B93A7", callback: (v) => `${v}%` },
         },
       },
     },
   });
 }
 
+// ---------- Closed positions table ----------
+function renderPositionsTable(trades) {
+  const body = document.getElementById("positions-body");
+
+  if (!trades.length) {
+    body.innerHTML = `<tr><td colspan="10" class="empty-state">No closed positions in data/closed_positions.csv yet.</td></tr>`;
+    return;
+  }
+
+  const rowsHtml = trades
+    .slice()
+    .sort((a, b) => new Date(b.close_date) - new Date(a.close_date))
+    .map((t) => `
+      <tr data-ticker="${t.ticker}">
+        <td class="ticker-cell">${t.ticker}</td>
+        <td>${t.sector ?? "—"}</td>
+        <td>${t.theme ?? "—"}</td>
+        <td><span class="status-badge">${t.status}</span></td>
+        <td class="num-col">${t.shares}</td>
+        <td>${t.entry_date}</td>
+        <td class="num-col">${fmtUSD(t.entry_price)}</td>
+        <td>${t.close_date}</td>
+        <td class="num-col">${fmtUSD(t.close_price)}</td>
+        <td class="num-col ${plClass(t.pl_pct)}">${fmtPct(t.pl_pct)}</td>
+      </tr>
+    `)
+    .join("");
+
+  body.innerHTML = rowsHtml;
+
+  document.getElementById("position-search").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toUpperCase();
+    document.querySelectorAll("#positions-body tr[data-ticker]").forEach((row) => {
+      row.classList.toggle("is-hidden", q && !row.dataset.ticker.includes(q));
+    });
+  });
+}
+
+// ---------- Distribution pies ----------
 function renderDonut(canvasId, breakdown) {
   const ctx = document.getElementById(canvasId);
   if (!breakdown.length) return;
@@ -155,23 +138,54 @@ function renderDonut(canvasId, breakdown) {
   });
 }
 
+// ---------- Research notes ----------
+function renderNotes(notes) {
+  const container = document.getElementById("notes-scroll");
+
+  if (!notes.length) {
+    container.innerHTML = `<p class="empty-state">No research notes in notes/ yet.</p>`;
+    return;
+  }
+
+  container.innerHTML = notes
+    .map((n) => `
+      <article class="note-card" data-ticker="${n.ticker}">
+        <div class="note-meta">
+          <span class="note-ticker">${n.ticker || "—"}</span>
+          <span class="note-date">${n.date || ""}</span>
+        </div>
+        <h3 class="note-title">${n.title}</h3>
+        <div class="note-body">${n.html}</div>
+      </article>
+    `)
+    .join("");
+
+  document.getElementById("notes-search").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toUpperCase();
+    document.querySelectorAll("#notes-scroll .note-card").forEach((card) => {
+      card.classList.toggle("is-hidden", q && !card.dataset.ticker.includes(q));
+    });
+  });
+}
+
 async function init() {
   try {
-    const [live, history] = await Promise.all([
-      loadJSON("data/live.json"),
-      loadJSON("data/history.json").catch(() => []),  // fine if it doesn't exist yet
-    ]);
+    const live = await loadJSON("data/live.json");
 
-    renderSummary(live.summary);
-    renderTape(live.holdings);
-    renderTable(live.holdings);
-    renderPerformanceChart(history);
+    const updated = live.updated ? new Date(live.updated) : null;
+    document.getElementById("last-updated").textContent = updated
+      ? `Last updated ${updated.toLocaleString()}`
+      : "";
+
+    renderEquityChart(live.equity_curve || [], live.summary || {});
+    renderPositionsTable(live.trades || []);
     renderDonut("sector-chart", live.sector_breakdown || []);
-    renderDonut("factor-chart", live.factor_breakdown || []);
+    renderDonut("theme-chart", live.theme_breakdown || []);
+    renderNotes(live.notes || []);
   } catch (err) {
     console.error(err);
-    document.getElementById("holdings-body").innerHTML =
-      `<tr><td colspan="10" class="empty-state">Couldn't load data/live.json yet — run scripts/update_data.py once, or wait for the first GitHub Action run.</td></tr>`;
+    document.getElementById("positions-body").innerHTML =
+      `<tr><td colspan="10" class="empty-state">Couldn't load data/live.json yet — run scripts/update_data.py once, or push a change to trigger the GitHub Action.</td></tr>`;
   }
 }
 

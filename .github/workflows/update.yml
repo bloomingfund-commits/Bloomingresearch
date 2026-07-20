@@ -1,18 +1,19 @@
-name: Update Portfolio Data
+name: Rebuild Dashboard Data
 
 on:
-  schedule:
-    # 21:05 UTC on weekdays ~= 4:05pm ET (US market close) during EDT.
-    # Adjust the cron for your timezone / how often you want updates -
-    # e.g. every 30 min during market hours: "*/30 14-21 * * 1-5"
-    - cron: "5 21 * * 1-5"
+  push:
+    branches: [main]
+    paths:
+      - "data/closed_positions.csv"
+      - "notes/**"
+      - "scripts/**"
   workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
 
 permissions:
   contents: write
 
 jobs:
-  update:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,13 +25,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run updater
+      - name: Run builder
         run: python scripts/update_data.py
 
       - name: Commit updated data
         run: |
           git config user.name "portfolio-bot"
           git config user.email "actions@github.com"
-          git add data/live.json data/history.csv data/history.json
-          git diff --cached --quiet || git commit -m "Update portfolio data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+          git add data/live.json
+          git diff --cached --quiet || git commit -m "Rebuild dashboard data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
           git push

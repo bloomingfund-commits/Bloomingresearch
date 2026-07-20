@@ -1,81 +1,108 @@
-# Portfolio Dashboard
+# Track Record Dashboard
 
-A static, GitHub Pages-hosted dashboard for a real stock portfolio. Prices
-refresh automatically on a schedule via a GitHub Action — no server, no
-database, no hosting cost.
+A static, GitHub Pages dashboard showing closed trades, an equity curve,
+sector/theme distribution, and research notes — no server, no database.
 
-**How it works**
+## What changed from the earlier "open positions" version
+
+This is a restructure: instead of tracking live open positions, it tracks
+your **closed trade history** — a track record rather than a live book.
+Because entry/close prices are fixed once a trade is closed, there's no
+need for live price fetching or a scheduled Action anymore — it only
+rebuilds when you actually push a new trade or note.
+
+## How it works
 
 ```
-data/holdings.csv   <- you edit this by hand (add/remove/adjust positions)
+data/closed_positions.csv   <- you edit this: Ticker, Shares, EntryDate,
+                                EntryPrice, CloseDate, ClosePrice, Theme
+notes/*.md                  <- you write these: one markdown file per
+                                research note (see notes/2026-03-10-nvda.md
+                                for the format)
         │
         ▼
-scripts/update_data.py   <- pulls live prices + sector via yfinance,
-        │                    computes P&L, sector/factor breakdowns
-        ▼
-data/live.json            <- the dashboard reads this
-data/history.csv/.json    <- one row appended per day, powers the
-                              performance chart
+scripts/update_data.py      <- looks up Sector live (Yahoo Finance),
+                                computes P&L/holding days, builds the
+                                equity curve, parses + sorts notes
         │
         ▼
-index.html + app.js + style.css   <- renders it all, no build step
+data/live.json               <- the dashboard reads this
+        │
+        ▼
+index.html + app.js + style.css   <- renders everything, no build step
 ```
 
-A GitHub Actions workflow (`.github/workflows/update.yml`) runs
-`update_data.py` on a schedule, then commits the refreshed `data/*.json`
-files back to the repo — which triggers GitHub Pages to redeploy with
-fresh numbers.
+A GitHub Actions workflow (`.github/workflows/update.yml`) runs the
+builder automatically whenever you push a change to
+`data/closed_positions.csv` or `notes/`, then commits the refreshed
+`data/live.json` back — which triggers Pages to redeploy.
 
-## Setup
+## Adding a closed trade
 
-1. **Create a new GitHub repo** and push everything in this folder to it.
+Add a row to `data/closed_positions.csv`:
 
-2. **Enable GitHub Pages**
-   Repo → Settings → Pages → Source: "Deploy from a branch" → Branch:
-   `main`, folder `/ (root)`. Save. Your site will be live at
-   `https://<username>.github.io/<repo-name>/` within a minute or two.
+```csv
+Ticker,Shares,EntryDate,EntryPrice,CloseDate,ClosePrice,Theme
+AAPL,10,2025-11-04,185.20,2026-01-15,204.10,Momentum
+```
 
-3. **Enable Actions write permissions** (needed so the workflow can commit
-   data back)
-   Repo → Settings → Actions → General → Workflow permissions →
-   "Read and write permissions". Save.
+You fill in: `Ticker`, `Shares`, `EntryDate`, `EntryPrice`, `CloseDate`,
+`ClosePrice`, `Theme`. Everything else — Sector, Status, P&L $/%, holding
+days, its place on the equity curve — is computed automatically.
 
-4. **Edit `data/holdings.csv`** with your real positions:
+**Why Theme isn't auto-generated**: Sector comes from Yahoo Finance, a
+real data source. Theme is your own investment thesis/classification
+("Momentum," "GARP," "AI Infrastructure," etc.) — there's no API that can
+infer *why* you took a trade, so that one stays manual.
 
-   ```csv
-   Ticker,Shares,EntryPrice,EntryDate,Factor,Notes
-   AAPL,10,185.20,2025-11-04,Momentum,
-   ```
+## Adding a research note
 
-   `Factor` is a free-text tag — use whatever labels fit your own
-   framework (Momentum, GARP, PEAD, Mean Reversion, Quant Factor, etc.);
-   it's just grouped and charted as-is.
+Create a new file in `notes/`, named however you like (e.g.
+`2026-07-20-msft-thesis.md`), with this format:
 
-5. **Trigger the first update manually** so the site has data on day one
-   Repo → Actions tab → "Update Portfolio Data" → Run workflow. After it
-   finishes, refresh your Pages URL.
+```markdown
+---
+ticker: MSFT
+date: 2026-07-20
+title: Why I'm closing MSFT here
+---
 
-From then on it updates itself on the schedule set in
-`.github/workflows/update.yml` (default: weekdays, ~5 min after US market
-close). Edit the cron line to run more or less often.
+Your note content in **markdown** — bold, links, lists, paragraphs
+all work.
+```
+
+Notes are sorted most-recent-first automatically based on the `date`
+field. A leading underscore in the filename (e.g. `_template.md`) makes
+the builder skip that file, if you want to keep a template around.
+
+## Setup (same as before)
+
+1. Push this folder to a new GitHub repo (public).
+2. Settings → Pages → Deploy from branch `main`, folder `/ (root)`.
+3. Settings → Actions → General → Workflow permissions → "Read and write
+   permissions."
+4. Edit `data/closed_positions.csv` and/or add a note, commit, push — the
+   Action runs automatically and the site updates within a minute or two.
+   (Or trigger it manually: Actions tab → "Rebuild Dashboard Data" → Run
+   workflow.)
 
 ## Running locally
 
 ```bash
 pip install -r requirements.txt
-python scripts/update_data.py       # writes data/live.json + history
-
-python -m http.server 8080          # then open http://localhost:8080
+python scripts/update_data.py
+python -m http.server 8080     # then open http://localhost:8080
 ```
 
 ## Notes
 
-- yfinance is unofficial/free and can occasionally rate-limit or change —
-  the updater logs a warning and skips a ticker gracefully rather than
-  failing the whole run if one fetch fails.
-- Sector is pulled live from Yahoo's `info` endpoint per ticker; if it's
-  missing for a given stock, that position is grouped under "Unknown" in
-  the sector chart rather than breaking the page.
-- This is a public dashboard by design (per your setup) — don't put
-  account numbers, balances beyond what you're comfortable sharing, or
-  any other sensitive info in `holdings.csv`/`Notes`.
+- The equity curve **compounds** each trade's return (as if fully
+  reinvested each time) rather than summing P&L% additively. If you'd
+  rather see simple additive cumulative P&L%, that's a one-line change
+  in `build_equity_curve()` in `scripts/update_data.py`.
+- "Portfolio distribution" (the two pie charts) is based on **capital
+  deployed** (cost basis) per sector/theme across your closed trades —
+  since nothing is currently open, this reflects historical allocation,
+  not a live position.
+- This is public by design — don't put account balances or anything
+  sensitive in `Notes`/note files beyond what you're comfortable sharing.
